@@ -1,6 +1,5 @@
 import os
 
-
 from flask import Flask, request
 
 from sqlalchemy import create_engine
