@@ -22,40 +22,46 @@ def index():
     return 'flask run ok'
 
 
-@app.route('/data/<string:name>')
-def data(name):
+@app.route('/data/<int:sensor_id>')
+def data(sensor_id):
 
+    r_num = db.execute(
+        'SELECT count(*) AS r_num FROM public.datalog '
+        'WHERE sensor_id = :sensor_id',
+        {'sensor_id': sensor_id}
+    ).first()[0]
 
-    try:
-        q = db.execute(
-            'SELECT * FROM public.' + name + ' '
-            'ORDER BY time DESC'
-        ).first()
+    if not r_num:
+        return f'no such sensor: {sensor_id}'
 
-        d = {'last read': q[1], 'total reads': q[0],
-             'values': {'temperature': float(q[2]), 'humidity': float(q[3])}}
+    q = db.execute(
+        'SELECT * FROM public.datalog '
+        'WHERE sensor_id = :sensor_id '
+        'ORDER BY time DESC',
+        {'sensor_id': sensor_id}
+    ).first()
 
-        return d
+    result = {'last read': q[1], 'total reads': r_num,
+              'values': {'temperature': float(q[3]), 'humidity': float(q[4])}}
 
-    except Exception as e:
-        return str(e)
+    return result
 
 
 @app.route('/log/', methods=['POST'])
 def log():
     req_data = request.get_json()
-    name = req_data['name']
+    sensor_id = req_data['sensor_id']
 
-    sensor_key = db.execute(
-        'SELECT key FROM public.sensor '
-        'WHERE name = :name',
-        {'name': name}
+    sensor = db.execute(
+        'SELECT * FROM public.register '
+        'WHERE id = :sensor_id',
+        {'sensor_id': sensor_id}
     ).first()
 
-    if not sensor_key:
-        return f'no such sensor: {name}'
+    if not sensor:
+        return f'no such sensor: {sensor_id}'
 
-    elif req_data['key'] != sensor_key[0]:
+    elif req_data['key'] != sensor[2]:
         return 'API key no valid'
 
     else:
@@ -63,10 +69,12 @@ def log():
         humidity = req_data['values']['humidity']
 
         db.execute(
-            'INSERT INTO public.' + name + ' (temperature, humidity) '
-            'VALUES (:temperature, :humidity) ',
-            {'temperature': temperature,
-             'humidity': humidity
+            'INSERT INTO public.datalog (sensor_id, value_1, value_2) '
+            'VALUES (:sensor_id, :temperature, :humidity) ',
+            {
+                'sensor_id': sensor_id,
+                'temperature': temperature,
+                'humidity': humidity
              })
 
         db.commit()
