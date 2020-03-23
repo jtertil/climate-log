@@ -1,10 +1,8 @@
 import os
-
-from flask import Flask, request
-
-from werkzeug.exceptions import BadRequest, Unauthorized
+from flask import Flask, request, Response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from werkzeug.exceptions import BadRequest, Unauthorized
 
 app = Flask(__name__)
 
@@ -78,3 +76,4 @@ def log():
              })
 
         db.commit()
+        return Response('Success', status=201)
