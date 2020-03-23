@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, request
 
+from werkzeug.exceptions import BadRequest, Unauthorized
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -31,7 +32,7 @@ def data(sensor_id):
     ).first()[0]
 
     if not r_num:
-        return f'no such sensor: {sensor_id}'
+        raise BadRequest(f'No such sensor: {sensor_id}')
 
     q = db.execute(
         'SELECT * FROM public.datalog '
@@ -58,10 +59,10 @@ def log():
     ).first()
 
     if not sensor:
-        return f'no such sensor: {sensor_id}'
+        raise BadRequest(f'No such sensor: {sensor_id}')
 
     elif req_data['key'] != sensor[2]:
-        return 'API key no valid'
+        raise Unauthorized('API key no valid.')
 
     else:
         temperature = req_data['values']['temperature']
@@ -77,5 +78,3 @@ def log():
              })
 
         db.commit()
-        return 'update ok'
-
